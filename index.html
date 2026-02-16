@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VTO Tracker — 8h Billable Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg-color: #eef3fb;
+      --card-bg: #ffffff;
+      --text-color: #2d3748;
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --border: #dbe3f1;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    }
+    body.dark {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --text-color: #e2e8f0;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --border: #334155;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+    }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: var(--bg-color);
+      color: var(--text-color);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      margin: 0;
+      transition: background 0.3s, color 0.3s;
+    }
+    .container {
+      width: 100%;
+      max-width: 950px;
+      background: var(--card-bg);
+      padding: 40px;
+      border-radius: 20px;
+      box-shadow: var(--shadow);
+      box-sizing: border-box;
+      animation: fadeIn 0.8s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    h2 { text-align: center; margin-bottom: 10px; font-weight: 600; }
+    .toggle-theme {
+      position: absolute; top: 20px; right: 30px; font-size: 22px;
+      cursor: pointer; color: var(--primary); transition: 0.3s;
+    }
+    .toggle-theme:hover { color: var(--primary-hover); }
+    .note { text-align: center; font-size: 14px; color: #64748b; margin-bottom: 30px; }
+    label { font-weight: 500; margin-top: 10px; display: block; }
+    input {
+      width: 100%; padding: 12px 16px; border: 1px solid var(--border);
+      border-radius: 10px; background: rgba(255, 255, 255, 0.7);
+      font-size: 15px; color: var(--text-color);
+      margin-top: 6px; margin-bottom: 16px; transition: border 0.3s, box-shadow 0.3s;
+    }
+    input:focus { border-color: var(--primary); box-shadow: 0 0 5px rgba(37,99,235,0.4); outline: none; }
+    button {
+      width: 100%; padding: 14px; border: none; border-radius: 12px;
+      background: var(--primary); color: #fff; font-weight: 600; font-size: 16px;
+      cursor: pointer; transition: background 0.3s, transform 0.2s;
+    }
+    button:hover { background: var(--primary-hover); transform: translateY(-2px); }
+    .output {
+      margin-top: 35px; padding: 25px; border-radius: 14px;
+      background: rgba(0,0,0,0.03); border: 1px solid var(--border);
+      box-shadow: var(--shadow); display: none; animation: fadeIn 0.6s ease;
+    }
+    .output p { margin: 10px 0; font-size: 15px; }
+    .output span { font-weight: 600; color: var(--primary); }
+    .warning { margin-top: 12px; color: #ef4444; font-weight: 600; font-size: 15px; }
+    #loadedMsg {
+      text-align: center; color: var(--primary); font-size: 14px;
+      margin-bottom: 10px; opacity: 0; transition: opacity 1s;
+    }
+    .export-btn { margin-top: 15px; background: #10b981; }
+    .export-btn:hover { background: #059669; }
+    @media (max-width: 768px) {
+      .container { padding: 28px; border-radius: 16px; }
+      h2 { font-size: 22px; }
+      input, button { font-size: 14px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toggle-theme" id="themeToggle" title="Toggle Light/Dark Mode">🌙</div>
+
+  <div class="container">
+    <h2>VTO Tracker (8h Billable / Agent)</h2>
+    <div id="loadedMsg">💾 Previous data loaded</div>
+    <div class="note">💡 Calculate daily available billable hours including absences, late time, and early outs.</div>
+
+    <label>Total Agent Headcount:</label>
+    <input type="number" id="headcount" placeholder="e.g. 30" min="1">
+
+    <label>Agents on Vacation Leave (VL):</label>
+    <input type="number" id="vl" placeholder="e.g. 2" min="0">
+
+    <label>Agents on Leave of Absence (LOA):</label>
+    <input type="number" id="loa" placeholder="e.g. 1" min="0">
+
+    <label>Agents Absent Today:</label>
+    <input type="number" id="absent" placeholder="e.g. 2" min="0">
+
+    <label>Total Late Hours:</label>
+    <input type="number" id="lateHours" placeholder="e.g. 3.5" min="0" step="0.1">
+
+    <label>Early Out / VTO Hours:</label>
+    <input type="number" id="earlyOutHours" placeholder="e.g. 4.0" min="0" step="0.1">
+
+    <label>Total PVTO Agents (8h per agent):</label>
+    <input type="number" id="pvtoHours" placeholder="e.g. 2" min="0" step="1">
+
+    <label>Required Billable Hours:</label>
+    <input type="number" id="requiredBillable" value="160" min="1">
+
+    <button onclick="calculateTracker()">Calculate</button>
+
+    <div class="output" id="output">
+      <p><strong>Adjusted Headcount:</strong> <span id="adjustedHeadcount"></span></p>
+      <p><strong>Present Headcount:</strong> <span id="presentHeadcount"></span></p>
+      <p><strong>Available Billable Hours:</strong> <span id="availableHours"></span> hrs</p>
+      <p><strong>Required Hours:</strong> <span id="requiredHours"></span> hrs</p>
+      <p><strong>Extra Hours:</strong> <span id="extraHours"></span> hrs</p>
+      <p><strong>Full Agents Equivalent:</strong> <span id="fullAgents"></span></p>
+      <p><strong>Agents Allowed 1-Hr Extended Lunch:</strong> <span id="extendedLunch"></span></p>
+      <p id="warning" class="warning" style="display:none;"></p>
+      <button class="export-btn" onclick="exportCSV()">⬇️ Download CSV Report</button>
+    </div>
+  </div>
+
+  <script>
+    // 🌙 Theme toggle
+    const themeToggle = document.getElementById("themeToggle");
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const savedTheme = localStorage.getItem("theme");
+    if (savedTheme === "dark" || (!savedTheme && prefersDark)) {
+      document.body.classList.add("dark"); themeToggle.textContent = "☀️";
+    }
+    themeToggle.addEventListener("click", () => {
+      document.body.classList.toggle("dark");
+      const isDark = document.body.classList.contains("dark");
+      themeToggle.textContent = isDark ? "☀️" : "🌙";
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+    });
+
+    // 🧮 Calculation
+    let lastResult = null;
+    function calculateTracker() {
+      const ids = ["headcount","vl","loa","absent","lateHours","earlyOutHours","pvtoHours","requiredBillable"];
+      const data = {};
+      ids.forEach(id => data[id] = parseFloat(document.getElementById(id).value) || 0);
+      localStorage.setItem("vtoData", JSON.stringify(data));
+
+      const adjusted = data.headcount - data.vl - data.loa - data.pvtoHours;
+      const present = adjusted - data.absent;
+      if (present <= 0) return alert("Present headcount must be greater than 0.");
+
+      const available = (adjusted * 8) - data.lateHours - data.earlyOutHours - (data.pvtoHours * 8);
+      const extra = available - data.requiredBillable;
+      const fullAgents = (extra / 8).toFixed(2);
+      const extendedLunch = extra >= 1 ? Math.floor(extra / 1) : 0;
+
+      lastResult = { adjusted, present, available, required: data.requiredBillable, extra, fullAgents, extendedLunch };
+
+      document.getElementById("adjustedHeadcount").textContent = adjusted;
+      document.getElementById("presentHeadcount").textContent = `${present}/${adjusted}`;
+      document.getElementById("availableHours").textContent = available.toFixed(2);
+      document.getElementById("requiredHours").textContent = data.requiredBillable.toFixed(2);
+      document.getElementById("extraHours").textContent = extra.toFixed(2);
+      document.getElementById("fullAgents").textContent = fullAgents;
+      document.getElementById("extendedLunch").textContent = extendedLunch;
+
+      const warn = document.getElementById("warning");
+      warn.style.display = extra < 0 ? "block" : "none";
+      if (extra < 0) warn.textContent = "⚠️ Not enough billable hours to meet today's requirement!";
+      document.getElementById("output").style.display = "block";
+    }
+
+    // 💾 Restore saved data
+    window.addEventListener("DOMContentLoaded", () => {
+      const saved = localStorage.getItem("vtoData");
+      if (saved) {
+        const data = JSON.parse(saved);
+        Object.keys(data).forEach(k => { const el = document.getElementById(k); if (el) el.value = data[k]; });
+        const msg = document.getElementById("loadedMsg");
+        msg.style.opacity = "1"; setTimeout(() => msg.style.opacity = "0", 2000);
+      }
+    });
+
+    // 📤 Export CSV
+    function exportCSV() {
+      if (!lastResult) return alert("Please calculate first.");
+      const rows = [
+        ["Metric", "Value"],
+        ["Adjusted Headcount", lastResult.adjusted],
+        ["Present Headcount", lastResult.present],
+        ["Available Billable Hours", lastResult.available],
+        ["Required Hours", lastResult.required],
+        ["Extra Hours", lastResult.extra],
+        ["Full Agents Equivalent", lastResult.fullAgents],
+        ["Agents Allowed 1-Hr Extended Lunch", lastResult.extendedLunch]
+      ];
+      let csv = rows.map(r => r.join(",")).join("\n");
+      const blob = new Blob([csv], { type: "text/csv" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const date = new Date().toISOString().split("T")[0];
+      a.download = `VTO_Report_${date}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
